@@ -27,34 +27,44 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
-if "secret" not in st.session_state:
+
+def start_new_game():
+    st.session_state.attempts = 0
     st.session_state.secret = random.randint(low, high)
-
-if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
-
-if "score" not in st.session_state:
-    st.session_state.score = 0
-
-if "status" not in st.session_state:
     st.session_state.status = "playing"
-
-if "history" not in st.session_state:
+    st.session_state.score = 0
     st.session_state.history = []
+
+
+# FIX (AI collab): the first game started with attempts = 1 while New Game used 0 (so "Attempts
+# Left" was off by one), and switching difficulty kept a secret from the old range. Claude Code
+# routed first load, New Game, and difficulty changes through one start_new_game() with attempts = 0.
+if "secret" not in st.session_state or st.session_state.get("difficulty") != difficulty:
+    start_new_game()
+    st.session_state.difficulty = difficulty
 
 st.subheader("Make a guess")
 
-st.info(
-    f"Guess a number between 1 and 100. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
-)
+# FIX (AI collab): the "1 and 100" text was hardcoded, and the info/debug panels were drawn before
+# a guess was processed, so Attempts Left and Score were one guess behind. Claude Code moved them
+# into placeholders that are redrawn after the guess is handled, using the real range.
+status_box = st.empty()
+debug_box = st.empty()
 
-with st.expander("Developer Debug Info"):
-    st.write("Secret:", st.session_state.secret)
-    st.write("Attempts:", st.session_state.attempts)
-    st.write("Score:", st.session_state.score)
-    st.write("Difficulty:", difficulty)
-    st.write("History:", st.session_state.history)
+
+def render_status():
+    status_box.info(
+        f"Guess a number between {low} and {high}. "
+        f"Attempts left: {attempt_limit - st.session_state.attempts}"
+    )
+    with debug_box.container():
+        with st.expander("Developer Debug Info"):
+            st.write("Secret:", st.session_state.secret)
+            st.write("Attempts:", st.session_state.attempts)
+            st.write("Score:", st.session_state.score)
+            st.write("Difficulty:", difficulty)
+            st.write("History:", st.session_state.history)
+
 
 raw_guess = st.text_input(
     "Enter your guess:",
@@ -73,15 +83,12 @@ with col3:
 # the old score/history, and ignored difficulty. Claude Code traced the stuck state to the
 # unreset status; it now resets all of them and draws the secret from the difficulty's range.
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(low, high)
-    st.session_state.status = "playing"
-    st.session_state.score = 0
-    st.session_state.history = []
+    start_new_game()
     st.success("New game started.")
     st.rerun()
 
 if st.session_state.status != "playing":
+    render_status()
     if st.session_state.status == "won":
         st.success("You already won. Start a new game to play again.")
     else:
@@ -89,14 +96,14 @@ if st.session_state.status != "playing":
     st.stop()
 
 if submit:
-    st.session_state.attempts += 1
+    ok, guess_int, err = parse_guess(raw_guess, low, high)
 
-    ok, guess_int, err = parse_guess(raw_guess)
-
+    # FIX (AI collab): invalid input (blank, text, decimal, out of range) used up an attempt.
+    # Claude Code now counts an attempt only for a valid guess.
     if not ok:
-        st.session_state.history.append(raw_guess)
         st.error(err)
     else:
+        st.session_state.attempts += 1
         st.session_state.history.append(guess_int)
 
         # FIX (AI collab): the secret was converted to a str on even attempts, so guesses were
@@ -129,6 +136,8 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+render_status()
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")

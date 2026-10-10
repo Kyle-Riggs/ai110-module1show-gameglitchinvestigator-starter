@@ -4,30 +4,39 @@ def get_range_for_difficulty(difficulty: str):
         return 1, 20
     if difficulty == "Normal":
         return 1, 100
+    # FIX (AI collab): Hard (1-50) was a smaller range than Normal (1-100), so it was easier.
+    # Claude Code flagged it while reviewing the code; Hard is now the largest range (1-200).
     if difficulty == "Hard":
-        return 1, 50
+        return 1, 200
     return 1, 100
 
 
-def parse_guess(raw: str):
+def parse_guess(raw: str, low: int = None, high: int = None):
     """
-    Parse user input into an int guess.
+    Parse user input into an int guess, optionally checking it is within [low, high].
 
     Returns: (ok: bool, guess_int: int | None, error_message: str | None)
     """
     if raw is None:
         return False, None, "Enter a guess."
 
+    raw = raw.strip()
     if raw == "":
         return False, None, "Enter a guess."
 
+    # FIX (AI collab): decimals were silently truncated (5.9 became 5) and out-of-range guesses
+    # were accepted. Claude Code rewrote this to reject decimals and values outside [low, high].
     try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
+        value = int(raw)
+    except ValueError:
+        try:
+            float(raw)
+        except ValueError:
+            return False, None, "That is not a number."
+        return False, None, "Enter a whole number (no decimals)."
+
+    if low is not None and high is not None and not (low <= value <= high):
+        return False, None, f"Guess must be between {low} and {high}."
 
     return True, value, None
 
@@ -51,15 +60,16 @@ def check_guess(guess, secret):
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
     """Update score based on outcome and attempt number."""
+    # FIX (AI collab): a win cost an extra attempt (attempt_number + 1), and "Too High" awarded +5
+    # on even attempts but -5 on odd ones. Claude Code made wins score 100 - 10 * attempt_number
+    # (min 10) and made "Too High" always -5, matching "Too Low".
     if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
+        points = 100 - 10 * attempt_number
         if points < 10:
             points = 10
         return current_score + points
 
     if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
         return current_score - 5
 
     if outcome == "Too Low":
