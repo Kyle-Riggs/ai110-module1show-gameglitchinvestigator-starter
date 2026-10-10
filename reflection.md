@@ -5,18 +5,24 @@ Answer each question in 3 to 5 sentences. Be specific and honest about what actu
 ## 1. What was broken when you started?
 
 - What did the game look like the first time you ran it?
+  1. On my first play, I immediately got into a situation where the hints were nonsensical, and spent the remaining guesses quickly to get into another game to check more bugs. Unfortunately, the New Game button also was nonfunctional, forcing me to refresh the page. Something I noticed on refresh is that the amount of Attempts Left also changed, 7 on new load, 8 on pressing New Game.
 - List at least two concrete bugs you noticed at the start  
   (for example: "the hints were backwards").
+  1. Got the "Out of Attempts" message while still having "Attempts Left: 1" in the prompt. Would expect Attempts Left to be 0 when out of attempts.
+  2. Got "Go LOWER!" on guessing 41, and "Go HIGHER!" on guessing 40, while the actual number was 9. Would expect both to say "Go LOWER!".
+  3. Score in the bottom prompt is -35, while in developer debug info, it is -30. Would expect these to match.
+  4. There is no sanitation on input. Guesses can be out of range or decimal values in range. Would expect both of these to not be allowed.
+  5. The New Game button does not work as expected after losing a game (the secret number restarts but no attempts are given, despit the prompt saying otherwise). Even upon winning a game, you are unable to play. Would expect a full game reset, allowing you to play another game, regardless of the state of the previous game.
 
 **Bug Reproduction Log**
 
 Document at least 3 bugs you found. Add rows as needed.
 
-| Input | Expected Behavior | Actual Behavior | Console Output / Error |
-|-------|-------------------|-----------------|------------------------|
-| | | | |
-| | | | |
-| | | | |
+| Input         | Expected Behavior               | Actual Behavior                 | Console Output / Error |
+|---------------|---------------------------------|---------------------------------|------------------------|
+| 40,41         | Go Lower for both  (ans<40)     | Higher, Lower                   | none                   |
+| New Game      | Start with 7 Attempts in prompt | Start with 8 Attempts in prompt | none                   |
+| NG after loss | The game resets fully           | cannot enter more numbers       | none                   |
 
 ---
 
