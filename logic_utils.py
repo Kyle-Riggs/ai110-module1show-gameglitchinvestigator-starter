@@ -23,18 +23,12 @@ def check_guess(guess, secret):
 
     # Bug: hints were inverted (too-high guess said "Go HIGHER!", too-low said "Go LOWER!").
     # Fix: a too-high guess now tells the player to go LOWER, and a too-low guess to go HIGHER.
-    try:
-        if guess > secret:
-            return "Too High", "📉 Go LOWER!"
-        else:
-            return "Too Low", "📈 Go HIGHER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📉 Go LOWER!"
-        return "Too Low", "📈 Go HIGHER!"
+    # Bug: a TypeError fallback compared the guess and secret as strings. It only existed to
+    # cover the secret being passed as a str on even attempts, which is now fixed.
+    # Fix: removed the fallback; both values are always ints.
+    if guess > secret:
+        return "Too High", "📉 Go LOWER!"
+    return "Too Low", "📈 Go HIGHER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
