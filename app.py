@@ -1,51 +1,6 @@
 import random
 import streamlit as st
-from logic_utils import check_guess
-
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
-
-
-def parse_guess(raw: str):
-    if raw is None:
-        return False, None, "Enter a guess."
-
-    if raw == "":
-        return False, None, "Enter a guess."
-
-    try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
-
-    return True, value, None
-
-
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
-
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
+from logic_utils import check_guess, get_range_for_difficulty, parse_guess, update_score
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -114,9 +69,9 @@ with col2:
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
-# Bug: New Game only reset attempts and the secret, so status stayed "won"/"lost" (the
-# st.stop() check below blocked play), score/history carried over, and the secret ignored difficulty.
-# Fix: also reset status, score, and history, and draw the secret from the difficulty's range.
+# FIX (AI collab): New Game left status as "won"/"lost" (so st.stop() below blocked play), kept
+# the old score/history, and ignored difficulty. Claude Code traced the stuck state to the
+# unreset status; it now resets all of them and draws the secret from the difficulty's range.
 if new_game:
     st.session_state.attempts = 0
     st.session_state.secret = random.randint(low, high)
@@ -144,9 +99,8 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        # Bug: on even attempts the secret was converted to a string, so the guess was compared
-        # as text instead of as a number and hints/wins could be wrong.
-        # Fix: always pass the secret as an int.
+        # FIX (AI collab): the secret was converted to a str on even attempts, so guesses were
+        # compared as text. Claude Code spotted it while listing bugs; the secret is now always an int.
         secret = st.session_state.secret
 
         outcome, message = check_guess(guess_int, secret)

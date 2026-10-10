@@ -29,17 +29,28 @@ Document at least 3 bugs you found. Add rows as needed.
 ## 2. How did you use AI as a teammate?
 
 - Which AI tools did you use on this project (for example: ChatGPT, Gemini, Copilot)?
+  - I used Claude Code (in VS Code) as an agent that read the project, edited files, and ran pytest.
 - Give one example of an AI suggestion that was correct (including what the AI suggested and how you verified the result).
+  - **Suggestion:** The AI read `check_guess` and pointed out that the hints were inverted: a guess above the secret returned "Go HIGHER!" and a guess below it returned "Go LOWER!". It swapped the messages so a too-high guess says "Go LOWER!" and a too-low guess says "Go HIGHER!".
+  - **Correct:** Yes. This matched the bug I saw while playing (guessing 41 and 40 against a secret of 9 gave opposite hints).
+  - **Verified:** I had the AI write a parametrized pytest, `test_check_guess`, which checks the outcome and that the message contains the right direction and not the opposite one. It passes (3 passed with `python -m pytest`).
 - Give one example of an AI suggestion you did not accept as written (including what the AI suggested, why you rejected or changed it, and how you verified your version). It does not have to be a suggestion that was wrong: over-engineered, out of scope, harder to read, or a poor fit for this codebase all count.
+  - **Suggestion:** When I got `ModuleNotFoundError: No module named 'logic_utils'` running the test file directly, the AI added a `pytest.ini` (`pythonpath = .`) so imports would resolve from any folder.
+  - **Incorrect/unnecessary:** It worked, but it was out of scope. The error came from how I ran the tests (running the file instead of `pytest`), not from a problem in the project, so the extra config file wasn't needed.
+  - **Verified:** I asked the AI to remove the file, and `python -m pytest` from the project root still passes (3 passed).
 
 ---
 
 ## 3. Debugging and testing your fixes
 
 - How did you decide whether a bug was really fixed?
+  - I compared against the expected behavior I wrote in the bug log (for example, "Go LOWER for both guesses") and re-ran the same case after each fix. For logic bugs, I also wanted an automated test so the bug can't quietly come back.
 - Describe at least one test you ran (manual or using pytest)  
   and what it showed you about your code.
+  - I ran `python -m pytest` on `tests/test_game_logic.py`. The starter tests failed at first because they compared the whole result to a string like `"Too High"`, but `check_guess` returns a tuple `(outcome, message)`. That showed the tests were wrong, not the function, so I consolidated them into one parametrized test that unpacks the tuple and also checks the hint direction. All 3 cases pass.
+  - I played the game normally, while using the developer debug info to test correct functionality. When receiving a secret of 93, I guessed 92 to confirm "Go HIGHER!", twice in a row to confirm the strange behavior on even guesses, then I guessed 94 to confirm "Go LOWER!" appears, again twice. Afterwards, I guessed 92, winning the game, and hit New Game to confirm playing again was now possible.
 - Did AI help you design or understand any tests? How?
+  - Yes. The AI explained why the starter tests failed (tuple vs. string), wrote the consolidated parametrized test, and explained that the `ModuleNotFoundError` came from how I ran the file; running `python -m pytest` from the project root fixes it.
 
 ---
 
